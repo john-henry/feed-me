@@ -261,16 +261,26 @@ class User extends Element implements ElementInterface
         $assetsService = Craft::$app->getAssets();
         $volumes = Craft::$app->getVolumes();
 
-        $volumeId = Craft::$app->getSystemSettings()->getSetting('users', 'photoVolumeId');
-        $volume = $volumes->getVolumeById($volumeId);
 
-        $subpath = (string)Craft::$app->getSystemSettings()->getSetting('users', 'photoSubpath');
+		$volumeUid = Craft::$app->getProjectConfig()->get('users.photoVolumeUid');
 
-        if ($subpath) {
-            $subpath = Craft::$app->getView()->renderObjectTemplate($subpath, $user);
+        if (!$volumeUid || ($volume = $volumes->getVolumeByUid($volumeUid)) === null) {
+            throw new VolumeException(Craft::t('app',
+                'The volume set for user photo storage is not valid.'));
         }
+
+
+		$subpath = (string)Craft::$app->getProjectConfig()->get('users.photoSubpath');
+
+		if ($subpath) {
+            try {
+                $subpath = Craft::$app->getView()->renderObjectTemplate($subpath, $user);
+            } catch (\Throwable $e) {
+                throw new InvalidSubpathException($subpath);
+            }
+		}
+
 
         return $assetsService->ensureFolderByFullPathAndVolume($subpath, $volume);
     }
-
 }
